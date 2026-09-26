@@ -1,8 +1,8 @@
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    // 1. زيادكردنی (cert_folder) بۆ وەرگرتنی جۆری بڕوانامەکە لە ڕووکارەوە
-    const { app, password, p12, prov, use_free_cert, cert_folder } = req.body;
+    // لێرەدا ipa_link زیاد کرا بۆ وەرگرتنی لینکی بەرنامەکە لە وێبسایتەکەوە
+    const { app, password, p12, prov, use_free_cert, cert_folder, ipa_link } = req.body;
     
     const GITHUB_TOKEN = process.env.GITHUB_PAT;
     const GITHUB_REPO = process.env.GITHUB_REPO;
@@ -24,8 +24,8 @@ export default async function handler(req, res) {
                     p12_base64: p12 || "",
                     prov_base64: prov || "",
                     use_free_cert: use_free_cert ? "true" : "false",
-                    // 2. ناردنی ناوی فۆڵدەری بڕوانامەکە بۆ گیتھەب
                     cert_folder: cert_folder || "",
+                    ipa_link: ipa_link || "", // ناردنی لینکەکە بۆ گیتھەب
                     build_id: buildId
                 }
             })
