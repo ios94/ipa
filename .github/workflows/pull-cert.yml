@@ -15,13 +15,8 @@ jobs:
 
       - name: Fetch cert folder
         run: |
-          # داگرتنی پڕۆژە سەرەکییەکە بە شێوەیەکی کاتی
           git clone https://github.com/mzereashte94/nn.git temp-repo
-          
-          # هێنانی فۆڵدەری cert بۆ ناو پڕۆژەکەی خۆت
           cp -r temp-repo/cert ./
-          
-          # سڕینەوەی فایلە کاتییەکان
           rm -rf temp-repo
 
       - name: Commit and push
