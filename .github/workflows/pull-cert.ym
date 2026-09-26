@@ -1,0 +1,43 @@
+name: Pull Cert Folder
+
+on:
+  workflow_dispatch: # ئەمە ڕێگەت پێدەدات خۆت بە دەستی کاری پێ بکەیت
+
+permissions:
+  contents: write
+
+jobs:
+  copy-folder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout your repository
+        uses: actions/checkout@v4
+
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+        with:
+          repository: mzereashte94/nn
+          path: source-repo
+
+      - name: Copy cert folder
+        run: |
+          # دروستکردنی فۆڵدەری cert ئەگەر بوونی نەبێت
+          mkdir -p cert
+          
+          # کۆپیکردنی فایلەکان لە پڕۆژەی سەرەکییەوە بۆ ناو پڕۆژەکەی خۆت
+          cp -r source-repo/cert/* cert/
+          
+          # سڕینەوەی پڕۆژە کاتییەکە
+          rm -rf source-repo
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # زیادکردنی فایلە نوێیەکان
+          git add cert/
+          
+          # سەیڤکردن و ناردنی بۆ ناو گیتھەبەکەت ئەگەر گۆڕانکاری هەبێت
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update cert folder from mzereashte94/nn"
+          git push
