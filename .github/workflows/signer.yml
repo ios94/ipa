@@ -14,7 +14,6 @@ jobs:
           show-progress: false
           fetch-depth: 1
           sparse-checkout: |
-            icons/
             cert/
 
       - name: 🚀 Ultra Fast Production Sign
@@ -26,6 +25,7 @@ jobs:
           PROV_BASE64: ${{ github.event.client_payload.prov_base64 }}
           CUSTOM_PASSWORD: ${{ github.event.client_payload.password }}
           BUILD_ID: ${{ github.event.client_payload.build_id }}
+          IPA_LINK: ${{ github.event.client_payload.ipa_link }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
         run: |
           set -euo pipefail
@@ -47,30 +47,20 @@ jobs:
           activate = 1
           EOF
           export OPENSSL_CONF=/tmp/custom_openssl.cnf
-          
-          # 2. تحديد الأسماء حسب الملفات المرفوعة في V1
-          if [[ "$APP_NAME" == "AshteMobile" ]]; then IPA_NAME="AshteMobile.ipa"; ICON_NAME="Ashtemobile.jpeg";
-          elif [[ "$APP_NAME" == "Esign" || "$APP_NAME" == "ESign" ]]; then IPA_NAME="Esign.ipa"; ICON_NAME="Esign.jpeg";
-          elif [[ "$APP_NAME" == "Ksign" || "$APP_NAME" == "KSign" ]]; then IPA_NAME="Ksign.ipa"; ICON_NAME="Ksign.jpeg";
-          elif [[ "$APP_NAME" == "MyTV" ]]; then IPA_NAME="mytv.ipa"; ICON_NAME="mytv.jpeg";
-          elif [[ "$APP_NAME" == "ipaomtk" || "$APP_NAME" == "IPAOMTK" ]]; then IPA_NAME="ipaomtk.ipa"; ICON_NAME="ipaomtk.jpeg";
-          fi
 
-          # 3. تنفيذ المهام بالتوازي
+          # 2. تنفيذ المهام بالتوازي (داگرتنی فایلەکە لە لینکە داینامیکییەکەوە)
           (
             wget -qO- https://github.com/zhlynn/zsign/releases/download/v1.0.4/zsign-linux-x86_64.tar.gz | tar -xz
             chmod +x zsign
           ) &
           
           (
-            gh release download V1 -p "$IPA_NAME" --repo ${{ github.repository }} > /dev/null 2>&1
-            mv "$IPA_NAME" raw_app.ipa
+            # لێرەدا ڕاستەوخۆ ئەپەکە لەو لینکە دادەگرێت کە وێبسایتەکە بۆی ناردووە
+            echo "Downloading IPA from: $IPA_LINK"
+            wget -qO raw_app.ipa "$IPA_LINK"
           ) &
           
           (
-            # پشتگوێخستنی هەڵە ئەگەر وێنەی ئایکۆنەکە نەبوو
-            cp "$GITHUB_WORKSPACE/icons/$ICON_NAME" downloaded_icon.png || true
-            
             if [[ "$USE_FREE_CERT" == "true" ]]; then
               cp "$GITHUB_WORKSPACE/cert/$CERT_FOLDER/cert.p12" ./cert.p12
               cp "$GITHUB_WORKSPACE/cert/$CERT_FOLDER/profile.mobileprovision" ./profile.mobileprovision
@@ -89,57 +79,45 @@ jobs:
             CERT_PASSWORD=$(echo "$CUSTOM_PASSWORD" | tr -d '\n\r')
           fi
 
-          # 4. الحقن السريع جداً (مع إيقاف pipefail مؤقتاً لتجنب خطأ Broken pipe)
+          # 3. الحقن السريع جداً (مع إيقاف pipefail مؤقتاً لتجنب خطأ Broken pipe)
           set +o pipefail
           APP_DIR=$(unzip -Z1 raw_app.ipa | grep -o -E '^Payload/[^/]+\.app/' | head -n 1)
           set -o pipefail
           
           unzip -qq raw_app.ipa "${APP_DIR}Info.plist"
-          
-          if [ -f downloaded_icon.png ]; then
-            mv downloaded_icon.png "${APP_DIR}CustomIpaBlackIcon.png"
-          fi
 
-          # 5. بايثون محسّن ولحظي (مع توليد Bundle ID عشوائي)
+          # 4. بايثون محسّن ولحظي (مع توليد Bundle ID عشوائي)
           python3 -c '
           import plistlib, sys, os, random, string
           app_name, app_dir = sys.argv[1], sys.argv[2]
           plist_path = f"{app_dir}Info.plist"
           
-          # دروستکردنی ٥ پیتی هەڕەمەکی (بۆ نموونە: xbkzm)
+          # دروستکردنی ٥ پیتی هەڕەمەکی بۆ ئەوەی هەر جارێک ئایدییەکە جیاواز بێت
           random_str = "".join(random.choices(string.ascii_lowercase, k=5))
           
-          # لکاندنی پیتە هەڕەمەکییەکان بە ئایدی بەرنامەکەوە
-          new_bundle_id = f"com.ashtemobile.{app_name.lower()}.{random_str}"
+          safe_app_name = app_name.replace(" ", "").lower()
+          new_bundle_id = f"com.ashtemobile.{safe_app_name}.{random_str}"
           
           try:
               with open(plist_path, "rb") as f: pl = plistlib.load(f)
-              
-              # گۆڕینی ئایدی ئەپەکە بۆ ئەمە نوێیە
               pl["CFBundleIdentifier"] = new_bundle_id
-              
-              if os.path.exists(f"{app_dir}CustomIpaBlackIcon.png"):
-                  pl["CFBundleIcons"] = {"CFBundlePrimaryIcon": {"CFBundleIconFiles": ["CustomIpaBlackIcon"], "UIPrerenderedIcon": True}}
-                  if "CFBundleIcons~ipad" in pl: pl["CFBundleIcons~ipad"] = pl["CFBundleIcons"]
-              
               with open(plist_path, "wb") as f: plistlib.dump(pl, f)
-              
-              # ناردنی ئایدییە نوێیەکە بۆ فایلەکە تا API بیخوێنێتەوە
               print(new_bundle_id)
           except:
               print(new_bundle_id)
           ' "$APP_NAME" "$APP_DIR" > bundle_id.txt
 
-          if [[ "$APP_NAME" == "Feather" || "$APP_NAME" == "KSign" || "$APP_NAME" == "Ksign" ]]; then
+          # خستنە ناوەوەی بڕوانامەکان بۆ ئەو ئەپانەی کە پێویستیان پێیەتی (وەک ESign)
+          if [[ "$APP_NAME" == "Feather" || "$APP_NAME" == "KSign" || "$APP_NAME" == "Ksign" || "$APP_NAME" == "ESign" || "$APP_NAME" == "Esign" ]]; then
             mkdir -p "${APP_DIR}signing-assets/PremiumCert"
             cp cert.p12 "${APP_DIR}signing-assets/PremiumCert/cert.p12"
             cp profile.mobileprovision "${APP_DIR}signing-assets/PremiumCert/cert.mobileprovision"
             echo "$CERT_PASSWORD" > "${APP_DIR}signing-assets/PremiumCert/cert.txt"
           fi
 
-          # 6. التجميع السريع (Compression 0) والتوقيع
+          # 5. التجميع السريع (Compression 0) والتوقيع
           zip -q0ur raw_app.ipa Payload
           ./zsign -q -k cert.p12 -p "$CERT_PASSWORD" -m profile.mobileprovision -o "${APP_NAME}_signed.ipa" raw_app.ipa
 
-          # 7. الرفع النهائي
+          # 6. الرفع النهائي (بەرزکردنەوەی بۆ بەکارهێنەر)
           gh release create "build-${BUILD_ID}" "${APP_NAME}_signed.ipa" "bundle_id.txt" -t "Cloud Build ${BUILD_ID}" -R ${{ github.repository }}
