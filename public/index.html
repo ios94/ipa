@@ -99,13 +99,14 @@
         .lib-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 16px; text-align: left; padding-left: 8px; }
         
         .bento-grid {
-            display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; align-items: stretch;
+            display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 12px; align-items: stretch;
             overflow-y: auto; max-height: 50vh; padding-bottom: 20px;
         }
         
         .app-bento-card {
-            flex: 1 1 calc(30% - 12px);
+            flex: 1 1 calc(33.333% - 12px);
             min-width: 95px;
+            max-width: 120px;
             background: var(--card-base); 
             border: 1px solid var(--border-line); 
             border-radius: 16px; 
@@ -172,7 +173,7 @@
             <div class="seg-btn active" id="btnFree" onclick="setTab('free')">Free Enterprise</div>
         </div>
 
-        <!-- VIP View -->
+        <!-- VIP View (چاککرا بۆ formVIP) -->
         <form id="formVIP" class="view-section">
             <div class="panel">
                 <div class="vip-app-btn" onclick="openSheet()">
@@ -185,8 +186,9 @@
                     </div>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
                 </div>
-                <!-- فایلە شاراوەکان بۆ هەڵگرتنی زانیارییەکان -->
+                
                 <input type="hidden" id="appInput" value="AshteMobile">
+                <!-- ئەمە لینکەکە هەڵدەگرێت بۆ VIP -->
                 <input type="hidden" id="ipaInput" value="">
 
                 <div class="upload-row">
@@ -269,7 +271,7 @@
             <div class="library-box">
                 <h2 class="lib-title">App Library</h2>
                 <div class="bento-grid" id="bentoContainer">
-                    <!-- ئەپەکان لێرە بە داینامیکی زیاد دەبن -->
+                    <!-- ئەپەکان لێرە بە داینامیکی دروست دەبن -->
                 </div>
             </div>
             
@@ -281,7 +283,7 @@
     <div class="sheet" id="appSheet">
         <div class="sheet-pill"></div>
         <div class="flex flex-col" id="sheetList">
-            <!-- لیستی VIP لێرە زیاد دەبێت -->
+            <!-- لیستی VIP لێرە بە داینامیکی دروست دەبن -->
         </div>
     </div>
 
@@ -290,11 +292,12 @@
         const appSheet = document.getElementById('appSheet');
         const sheetList = document.getElementById('sheetList');
 
-        // فەنکشنی ڕاکێشانی ئەپەکان لە فایلی JSON
+        // ڕاکێشانی ئەپەکان لە سۆرسە داینامیکییەکەوە
         async function loadAppsFromSource() {
             try {
                 const response = await fetch('https://ashtemobile.site/Ashtemobile.json');
                 const data = await response.json();
+                
                 const apps = data.apps || []; 
                 
                 bentoContainer.innerHTML = '';
@@ -315,8 +318,8 @@
                                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                 </div>
                             </div>
-                            <span class="app-text-name">${appName}</span>
-                            <button class="store-get-btn" onclick="installFreeApp('${appName}', this, '${ipaLink}')">GET</button>
+                            <span class="app-text-name" title="${appName}">${appName}</span>
+                            <button class="store-get-btn" onclick="installFreeApp('${appName.replace(/'/g, "\\'")}', this, '${ipaLink}')">GET</button>
                         </div>
                     `;
 
@@ -361,7 +364,6 @@
         function openSheet() { sheetOverlay.classList.add('show'); appSheet.classList.add('show'); }
         function closeSheet() { sheetOverlay.classList.remove('show'); appSheet.classList.remove('show'); }
         
-        // گۆڕانکاری لێرە کرا بۆ ئەوەی ipaLink هەڵبگرێت
         function selectApp(id, img, ipaLink) {
             document.getElementById('selImg').src = img; 
             document.getElementById('selName').innerText = id;
@@ -406,7 +408,6 @@
             btn.innerHTML = originalText; btn.style.opacity = '1'; btn.disabled = false;
         }
 
-        // زیادکردنی ipaLink بۆ ناردنی بۆ گیتھەب
         async function installFreeApp(appName, btnElement, ipaLink) {
             const selectedCertId = document.getElementById('freeCertSelect').value;
             const appCard = btnElement.parentElement;
@@ -469,7 +470,8 @@
             }
         }
 
-        document.getElementById('signForm').onsubmit = async (e) => {
+        // بەکارهێنانی formVIP لێرەدا
+        document.getElementById('formVIP').onsubmit = async (e) => {
             e.preventDefault();
             const status = document.getElementById('vipStatus');
             const btn = document.getElementById('submitBtn');
@@ -478,8 +480,9 @@
             const p12File = document.getElementById('p12File');
             const provFile = document.getElementById('provFile');
             const pass = document.getElementById('password');
+            
             const appSelected = document.getElementById('appInput').value;
-            const ipaLinkSelected = document.getElementById('ipaInput').value; // وەرگرتنی لینک بۆ بەشی VIP
+            const ipaLinkSelected = document.getElementById('ipaInput').value; 
 
             if (!p12File.files[0] || !provFile.files[0] || !pass.value) return alert('Attach files and enter password!');
 
