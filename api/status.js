@@ -9,9 +9,11 @@ export default async function handler(req, res) {
         });
 
         if (response.status === 200) {
-            // ئەگەر فایلەکە ئامادە بوو، لینکەکان دروست دەکات
-            const ipaUrl = `https://github.com/${GITHUB_REPO}/releases/download/build-${build_id}/${app}_signed.ipa`;
+            // بەکارهێنانی encodeURIComponent بۆ ئەوەی بۆشایی و پیتەکان کێشە دروست نەکەن لە لینکەکەدا
+            const safeFileName = encodeURIComponent(`${app}_signed.ipa`);
+            const ipaUrl = `https://github.com/${GITHUB_REPO}/releases/download/build-${build_id}/${safeFileName}`;
             const bundleUrl = `https://github.com/${GITHUB_REPO}/releases/download/build-${build_id}/bundle_id.txt`;
+            
             return res.status(200).json({ status: 'done', ipaUrl, bundleUrl });
         } else if (response.status === 404) {
             // ئەگەر هێشتا کاری تێدا دەکرا (لە گیتھەب ئەکشن)
