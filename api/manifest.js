@@ -2,19 +2,30 @@ export default async function handler(req, res) {
     const { ipa, bundle_url, app } = req.query;
     if (!ipa || !app) return res.status(400).send('Invalid Request');
 
-    // گۆڕینی ئایکۆنەکان بۆ ئەوانەی پڕۆژەی AshteMobile
-    const customIcons = {
-        'ashtemobile': 'https://raw.githubusercontent.com/mzereashte94/Mzere/main/icons/Ashtemobile.jpeg',
-        'esign': 'https://raw.githubusercontent.com/mzereashte94/Mzere/main/icons/Esign.jpeg',
-        'ksign': 'https://raw.githubusercontent.com/mzereashte94/Mzere/main/icons/Ksign.jpeg',
-        'mytv': 'https://raw.githubusercontent.com/mzereashte94/Mzere/main/icons/mytv.jpeg',
-        'ipaomtk': 'https://raw.githubusercontent.com/mzereashte94/Mzere/main/icons/ipaomtk.jpeg' // ئەم دێڕە زیاد کرا
-    };
+    // لۆگۆی بنەڕەتی (ئەگەر بەرنامەکە ئایکۆنی نەبوو ئەمە دادەنێت)
+    let iconUrl = 'https://raw.githubusercontent.com/mzereashte94/Mzere/main/icons/Ashtemobile.jpeg';
 
-    // دانانی AshteMobile وەک ئایکۆنی بنەڕەتی لە کاتی نەبوونی ئایکۆن
-    const iconUrl = customIcons[app.toLowerCase()] || customIcons['ashtemobile'];
-    // گۆڕینی Bundle ID بۆ AshteMobile
-    let actualBundleId = `com.ashtemobile.${app.toLowerCase()}`;
+    try {
+        // هێنانی زانیارییەکان لە سۆرسەکەتەوە بۆ ئەوەی ئایکۆنی ڕاستەقینەی بەرنامەکە دەربهێنێت
+        const sourceRes = await fetch('https://ashtemobile.site/Ashtemobile.json');
+        if (sourceRes.ok) {
+            const data = await sourceRes.json();
+            const apps = data.apps || [];
+            
+            // گەڕان بۆ بەرنامەکە بەپێی ناوەکەی
+            const foundApp = apps.find(a => a.name.toLowerCase() === app.toLowerCase());
+            
+            // ئەگەر بەرنامەکە دۆزرایەوە و ئایکۆنی هەبوو، ئایکۆنەکەی دەگۆڕێت
+            if (foundApp && foundApp.iconURL) {
+                iconUrl = foundApp.iconURL;
+            }
+        }
+    } catch (error) {
+        console.error("Failed to fetch custom icon from source");
+    }
+
+    // گۆڕینی Bundle ID بۆ AshteMobile (بە لابردنی بۆشاییەکانی ناوەکە)
+    let actualBundleId = `com.ashtemobile.${app.replace(/\s+/g, '').toLowerCase()}`;
 
     try {
         if (bundle_url) {
